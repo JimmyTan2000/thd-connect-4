@@ -1,0 +1,16 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+attrs = "*"
+termcolor = "*"
+
+[dev-packages]
+autopep8 = "*"
+ipython = "*"
+behave = "*"
+
+[requires]
+python_version = "3.10"

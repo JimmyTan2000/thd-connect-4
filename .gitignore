@@ -1,0 +1,5 @@
+*.bak
+Pipfile.lock
+__pycache__
+data
+reports

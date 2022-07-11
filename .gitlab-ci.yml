@@ -1,0 +1,73 @@
+stages:
+  - build
+  - e2e
+  - package
+  - package_release
+  - cleanup
+  - release
+
+build:
+  stage: build
+  image: docker:20.10.15-dind
+  script:
+    - docker-compose build
+
+e2e-test:
+  stage: e2e
+  image: docker:20.10.15-dind
+  script:
+    - docker-compose run --rm e2e_tests
+
+containerize:
+  stage: package
+  image: docker:20.10.15-dind
+  before_script:
+    - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+  script:
+    - docker build . -t ${CI_REGISTRY_IMAGE}/connect_four:${CI_COMMIT_REF_SLUG} --target prod
+    - docker push ${CI_REGISTRY_IMAGE}/connect_four:${CI_COMMIT_REF_SLUG}
+  after_script:
+    - docker rmi ${CI_REGISTRY_IMAGE}/connect_four:${CI_COMMIT_REF_SLUG}
+  except:
+    variables:
+      - $CI_COMMIT_TAG
+
+containerize-release:
+  stage: package_release
+  image: docker:20.10.15-dind
+  before_script:
+    - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+  script:
+    - docker build . -t ${CI_REGISTRY_IMAGE}/connect_four:${CI_COMMIT_REF_SLUG} --target prod
+    - docker build . -t ${CI_REGISTRY_IMAGE}/connect_four:latest --target prod
+    - docker push ${CI_REGISTRY_IMAGE}/connect_four:${CI_COMMIT_REF_SLUG}
+    - docker push ${CI_REGISTRY_IMAGE}/connect_four:latest
+  after_script:
+    - docker rmi ${CI_REGISTRY_IMAGE}/connect_four:${CI_COMMIT_REF_SLUG}
+    - docker rmi ${CI_REGISTRY_IMAGE}/connect_four:latest
+  rules:
+    - if: $CI_COMMIT_TAG != null
+
+remove-container:
+  stage: cleanup
+  image: docker:20.10.15-dind
+  before_script:
+    - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+  script:
+    - wget -O /usr/bin/reg https://github.com/genuinetools/reg/releases/download/v0.16.0/reg-linux-amd64
+    - chmod +x /usr/bin/reg
+    - reg rm ${CI_REGISTRY_IMAGE}/connect_four:${CI_COMMIT_REF_SLUG}
+  except:
+    variables:
+      - $CI_COMMIT_TAG
+
+release:
+  stage: release
+  rules:
+    - if: $CI_COMMIT_TAG != null
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  script:
+    - release-cli create
+      --name "connect_four-${CI_COMMIT_TAG}"
+      --description "A docker image is available at ${CI_REGISTRY_IMAGE}/connect_four:${CI_COMMIT_REF_SLUG}"
+      --tag-name "${CI_COMMIT_TAG}"

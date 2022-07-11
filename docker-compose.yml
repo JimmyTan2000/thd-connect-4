@@ -1,0 +1,28 @@
+version: '2'
+
+services:
+  connect-four:
+    command: python src/main.py
+    container_name: connect-four
+    stdin_open: true
+    tty: true
+    build:
+      context: .
+      dockerfile: dockerfile
+      target: prod
+    volumes:
+      - save_states:/app/data
+
+  e2e_tests:
+    command: python -m behave test/features
+    container_name: e2e_tests
+    build:
+      context: .
+      dockerfile: dockerfile
+      target: e2e_tests
+    volumes:
+      - save_states:/app/data
+      - ./reports:/app/reports
+
+volumes:
+  save_states:

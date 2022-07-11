@@ -1,0 +1,14 @@
+version: '2'
+
+services:
+  connect-four:
+    command: python src/main.py
+    container_name: connect-four
+    image: registry.mygit.th-deg.de/ds16028/psta-software-engineering-ki4/connect_four:latest
+    stdin_open: true
+    tty: true
+    volumes:
+      - save_states:/app/data
+
+volumes:
+  save_states:
